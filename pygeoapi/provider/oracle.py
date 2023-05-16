@@ -72,6 +72,7 @@ class DatabaseConnection:
         :returns: DatabaseConnection
         """
 
+        # STYLE-NOTE: should this say "conn_dict" (with t)?
         self.conn_dic = conn_dic
         self.table = table
         self.context = context
@@ -82,6 +83,8 @@ class DatabaseConnection:
         
     def __enter__(self):
         try:
+            # STYLE-NOTE: can be shortened to:  self.conn_dict.get("init_oracle_client", False)
+            # STYLE-NOTE: In python it's more common to write "if value" instead of "if value == True"
             if (
                 'init_oracle_client' in self.conn_dic 
                 and self.conn_dic['init_oracle_client'] == True
@@ -89,6 +92,7 @@ class DatabaseConnection:
                 oracledb.init_oracle_client()
             
             # Connect with tnsnames.ora entry and Login with Oracle Wallet
+            # STYLE-NOTE: can be shortened to:  self.conn_dict.get("external_auth") == "wallet"
             if (
                 'external_auth' in self.conn_dic 
                 and self.conn_dic['external_auth'] == "wallet"
@@ -96,6 +100,12 @@ class DatabaseConnection:
                 LOGGER.debug("Oracle connect with tnsnames.ora entry \
                     and login with Oracle Wallet")
 
+                # STYLE-NOTE: if there's a contains check and the value is also needed, this style is common
+                #             because the key is only defined once:
+                # ts_name = self.conn_dic.get("ts_name")
+                # if ts_name is None:
+                #     ...
+                # Also checks below can be shortened by using .get()
                 if 'tns_name' not in self.conn_dic:
                     raise Exception("tns_name must be set for external authentication!")
 
@@ -103,13 +113,17 @@ class DatabaseConnection:
             
             # Connect with SERVICE_NAME
             if 'service_name' in self.conn_dic:
+                # STYLE-NOTE: the modern way for string handling is to use f-strings like this:
+                # LOGGER.debug(f"asdf {self.conn_dic['service_name']}")
+                # this is usually preferred over using "+" and also over .format(), which occurs
+                # a few times below
                 LOGGER.debug("Oracle connect with service_name: " + self.conn_dic['service_name'])
                 
                 if 'host' not in self.conn_dic:
                     raise Exception("Host must be set for connection with service_name!")
                 
                 dsn = oracledb.makedsn(self.conn_dic['host'], 
-                                       self.conn_dic['port'] or 1521, 
+                                       self.conn_dic['port'] or 1521, # STYLE-NOTE: this will give an exception when port is not present in the dict, but it's possible to use self.conn_dic.get("port", 1521)
                                        service_name=self.conn_dic['service_name'])
             
             # Connect with SID
@@ -159,6 +173,14 @@ class DatabaseConnection:
             raise ProviderConnectionError(e)
         
         # Check if table name has schema inside
+        # STYLE-NOTE: a common way of doing this in python is self.table.split(".", 1)
+        #             and later checking if the resulting list has 1 or 2 elements.
+        #             this can even be done like this:
+        #             try:
+        #                 schema, table = self.table.split(".", 1)
+        #             except ValueError:
+        #                 schema = self.conn_dic['user']
+        #                 table = self.table
         dot_pos = self.table.find('.')
         if dot_pos > 0:
             schema = self.table[0:dot_pos]
@@ -223,6 +245,8 @@ class OracleProvider(BaseProvider):
         self.geom = provider_def.get('geom_field', 'geom')
         self.properties = [item.lower() for item in self.properties]
         
+        # STYLE-NOTE: these lines can often be shortened to oneliners e.g. like this:
+        #             self.sql_manipulator = provider_def.get("sql_manipulator")
         if 'sql_manipulator' in provider_def:
             self.sql_manipulator = provider_def['sql_manipulator']
         else:
@@ -238,6 +262,7 @@ class OracleProvider(BaseProvider):
         if 'source_crs' in provider_def:
             self.source_crs = provider_def['source_crs']
         else:
+            # STYLE-NOTE: maybe 4326 should be a constant somewhere here
             self.source_crs = 4326
         if 'target_crs' in provider_def:
             self.target_crs = provider_def['target_crs']
@@ -266,6 +291,7 @@ class OracleProvider(BaseProvider):
         """
         LOGGER.debug('Get available fields/properties')
         
+        # STYLE-NOTE: this could be a cached property
         if not self.fields:
             with DatabaseConnection(self.conn_dic,
                                     self.table,
@@ -273,6 +299,9 @@ class OracleProvider(BaseProvider):
                 self.fields = db.fields
         return self.fields
 
+    # STYLE-NOTE: this is a valid private method, however it's somewhat
+    #             uncommon to use those in python, those with one underscore
+    #             are more common
     def __get_where_clauses(self, properties, bbox, bbox_crs, sdo_mask="anyinteraction"):
         """
         Generarates WHERE conditions to be implemented in query.
@@ -292,6 +321,7 @@ class OracleProvider(BaseProvider):
         where_conditions = []
         
         if properties:
+            # STYLE-NOTE: in such cases it's useful to use f-strings. also should the second parameter be value instead of key?
             property_clauses = ['{} = :{}'.format(key, key) for key, value in properties]
             where_conditions += property_clauses
             where_dict["properties"] = dict(properties)
@@ -340,7 +370,10 @@ class OracleProvider(BaseProvider):
         :returns: STA $orderby string
         """
         ret = []
-        _map = {'+': 'ASC', '-': 'DESC'}
+        _paramemtermap = {'+': 'ASC', '-': 'DESC'}
+        # STYLE-NOTE: some translation libraries use underscore as a function,
+        #             so it's uncommon to use it as regular variable names.
+        #             by the way this would be a good use case for a list comprehension
         for _ in sortby:
             ret.append(f"{_['property']} {_map[_['order']]}")
         return f"ORDER BY {','.join(ret)}"
@@ -368,6 +401,7 @@ class OracleProvider(BaseProvider):
         :returns: GeoJSON FeaturesCollection
         """
         
+        # STYLE-NOTE: other providers use fewer exclamation marks :)
         LOGGER.debug('!!!!!!!!!!!!!!!!!! Query start !!!!!!!!!!!!!!!!!!!!')
         
         # Check mandatory filter properties
@@ -399,6 +433,8 @@ class OracleProvider(BaseProvider):
                 try:
                     cursor.execute(sql_query, where_dict["properties"])
                 except Exception as err:
+                    # STYLE-NOTE: catching all exceptions is ok when there isn't a more specific exception class,
+                    #             but maybe oracledb has a more specific one?
                     LOGGER.error('Error executing sql_query: {}: {}'.format(
                         sql_query, err))
                     raise ProviderQueryError()
@@ -451,6 +487,7 @@ class OracleProvider(BaseProvider):
             # SQL manipulation class
             paging_bind = {}
             if limit > 0:
+                # STYLE-NOTE: here f-strings can be very useful because it's clearer where which parameter goes
                 sql_query = "SELECT #HINTS# {} {} FROM {} t1 #JOIN# {} #WHERE# {} OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY".format(
                     props, geom, self.table, where_dict["clause"], orderby
                 )
@@ -497,6 +534,7 @@ class OracleProvider(BaseProvider):
                 'type': 'FeatureCollection',
                 'features': []
             }
+            # STYLE-NOTE: in python loops like this can be written as list comprehensions
             for rd in row_data:
                 feature = self.__response_feature(rd)
 
@@ -568,6 +606,7 @@ class OracleProvider(BaseProvider):
                                 properties=self.properties) as db:
             
             # Output type handler for Oracle LOB datatypes
+            # STYLE-NOTE: i think this function has already been defined above
             def output_type_handler(cursor, name, default_type, size, precision, scale):
                 if default_type == oracledb.DB_TYPE_CLOB:
                     return cursor.var(oracledb.DB_TYPE_LONG, arraysize=cursor.arraysize)

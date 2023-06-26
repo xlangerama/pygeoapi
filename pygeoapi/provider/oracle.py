@@ -771,6 +771,9 @@ class OracleProvider(BaseProvider):
             # Flter function to get only properties who are
             # in the column list
             def filter_binds(pair):
+                # REVIEW: this code is fine, but could also be shortened to:
+                # return pair[0].lower() in [field.lower() for field in self.fields]:
+
                 key, value = pair
                 if key.lower() in [field.lower() for field in self.fields]:
                     return True
@@ -781,6 +784,12 @@ class OracleProvider(BaseProvider):
             bind_variables = dict(
                 filter(filter_binds, request_data.get("properties").items())
             )
+            # REVIEW: in python, dict/list comprehensions are typically used for these kinds of things, e.g.
+            bind_variables = {
+                key: value
+                for key, value in request_data.get("properties").items()
+                if key[0].lower() in [field.lower() for field in self.fields]
+            }
 
             columns_str = ", ".join([col for col in columns])
             values_str = ", ".join([f":{col}" for col in columns])
@@ -817,6 +826,7 @@ class OracleProvider(BaseProvider):
                     request_data,
                 )
 
+            # REVIEW: can these placeholders really occur in this INSERT query?
             # Clean up placeholders that aren't used by the
             # manipulation plugin.
             sql_query = sql_query.replace("#HINTS#", "")
@@ -930,6 +940,8 @@ class OracleProvider(BaseProvider):
 
                 raise ProviderQueryError()
 
+        # REVIEW: this could also be expressed as:
+        # return rowcount == 1
         return True if rowcount == 1 else False
 
     def delete(self, identifier):
@@ -1012,6 +1024,10 @@ class OracleProvider(BaseProvider):
         return obj
 
 
+# REVIEW: here the super_cls parameter is annotated with type `type`, and then it defaults to None
+#         a type checker such as mypy would report an error here, because None is not allowed
+#         as a value like this. the appropriate type would be Optional[type] (Optional has to be
+#         imported from typing).
 def _class_factory(module_class_string, super_cls: type = None, **kwargs):
     """
     Factory function for class instances.

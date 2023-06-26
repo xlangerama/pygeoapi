@@ -118,6 +118,32 @@ class SqlManipulator:
         return sql_query, bind_variables
 
 
+# REVIEW: this could be made shorter by requiring another fixture in the fixture, for example:
+@pytest.fixture()
+def config_data():
+    return {
+        "host": HOST,
+        "port": PORT,
+        "service_name": SERVICE_NAME,
+        "user": USERNAME,
+        "password": PASSWORD,
+    }
+
+@pytest.fixture()
+def config_foo_bar(config_data):
+    return {
+        "name": "Oracle",
+        "type": "feature",
+        "data": config_data,
+        "id_field": "id",
+        "table": "lakes",
+        "geom_field": "geometry",
+        "editable": True,
+    }
+
+
+
+
 @pytest.fixture()
 def config():
     return {
@@ -259,6 +285,7 @@ def test_get_fields(config):
     assert provider.fields == expected_fields
 
 
+# REVIEW: isn't this test already included in the test above?
 def test_get_fields_properties(config_properties):
     """Test get_fields"""
     expected_fields = {
@@ -269,10 +296,12 @@ def test_get_fields_properties(config_properties):
 
     provider = OracleProvider(config_properties)
     provided_fields = provider.get_fields()
+    # REVIEW: leftover print
     print(provided_fields)
 
     assert provided_fields == expected_fields
     assert provider.fields == expected_fields
+    # REVIEW: duplicate assert
 
 
 def test_query_with_property_filter(config):
@@ -343,6 +372,8 @@ def test_create(config, create_geojson):
 
     assert result == 26
 
+    # REVIEW: this could also check if data is now actually present, e.g. by doing a get on 26
+
 
 def test_update(config, update_geojson):
     """Test simple update"""
@@ -354,6 +385,7 @@ def test_update(config, update_geojson):
 
     data = p.get(identifier)
 
+    # REVIEW: leftover print
     print(data)
 
     assert data.get("properties").get("area") == 536000
@@ -414,6 +446,9 @@ def test_get_sql_manipulator(config_manipulator):
     with pytest.raises(Exception):
         result = p.get(5)
 
+    # REVIEW: the check above asserts that there must be an exception,
+    #         and in python it's then not possible that result has any value,
+    #         so this assert is not necessary
     assert not result
 
 

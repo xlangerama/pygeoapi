@@ -280,12 +280,15 @@ class OracleProvider(BaseProvider):
         :returns: dict of fields
         """
         LOGGER.debug("Get available fields/properties")
-
         if not self.fields:
             with DatabaseConnection(
                 self.conn_dic, self.table, properties=self.properties
             ) as db:
                 self.fields = db.fields
+        
+            LOGGER.debug(f"Oracle Provider.fields is of type {type(self.fields)} and containts {self.fields}")
+        self.fields["skip_bbox"] = False
+        self.fields["skip_area"] = False
         return self.fields
 
     def _get_where_clauses(
@@ -305,12 +308,32 @@ class OracleProvider(BaseProvider):
 
         where_conditions = []
 
+        custom_params = ['skip_area', 'skip_bbox']
+        custom_clauses = {}
         if properties:
-            prop_clauses = [f"{key} = :{key}" for key, value in properties]
+            prop_clauses = [f"{key} = :{key}" for key, value in properties if key not in custom_params]
             where_conditions += prop_clauses
             where_dict["properties"] = dict(properties)
+            for param in custom_params:
+                where_dict["properties"].pop(param)
 
-        if bbox:
+            # custom_clauses = [(key, value) for key, value in properties if key in custom_params]
+            custom_clauses = {key: value for key, value in properties if key in custom_params}
+
+            LOGGER.debug(f"type of custom clauses: {custom_clauses}")
+            #other_properties = dict([custom_clauses])
+
+            # other_properties.pop([key[0] for key in properties if key[0] not in custom_params])
+            LOGGER.debug(f"other_properties CONTAINS: {custom_clauses}")
+            LOGGER.debug(f"type other_properties is: {type(custom_clauses)}")
+            LOGGER.debug(f"retrieve value of skip_bbox: {custom_clauses['skip_bbox']}")
+
+            LOGGER.debug(f"WHERE DICT CONTAINS: {where_dict}")
+            #TODO: you can test this with: 
+            # http://localhost:5000/collections/lakes_oracle/items?f=json&skip_bbox=false&bbox=100,50,110,55
+        if custom_clauses['skip_bbox'] == "true":
+            pass
+        elif bbox:
             bbox_dict = {"clause": "", "properties": {}}
 
             sdo_mask = f"mask={sdo_mask}"
@@ -347,7 +370,7 @@ class OracleProvider(BaseProvider):
         if where_conditions:
             where_dict["clause"] = f" WHERE {' AND '.join(where_conditions)}"
 
-        LOGGER.debug(where_dict)
+        LOGGER.debug(f"in line 363 where dict contains {where_dict}")
 
         return where_dict
 
@@ -416,6 +439,7 @@ class OracleProvider(BaseProvider):
 
         # Check mandatory filter properties
         property_dict = dict(properties)
+        LOGGER.debug(f"property_dict contains {property_dict}")
         if self.mandatory_properties:
             for mand_col in self.mandatory_properties:
                 if mand_col == "bbox" and not bbox:
@@ -427,7 +451,7 @@ class OracleProvider(BaseProvider):
                         raise ProviderQueryError(
                             f"Missing mandatory filter property: {mand_col}"
                         )
-
+        LOGGER.debug(f"KWARGS contains: {str(kwargs)}")
         if resulttype == "hits":
             with DatabaseConnection(
                 self.conn_dic,

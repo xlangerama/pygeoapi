@@ -303,11 +303,8 @@ class OracleProvider(BaseProvider):
         :returns: Dictionary with sql where clause and bind variables
         """
         LOGGER.debug("Get where clause with bind variables as dictionary")
-
         where_dict = {"clause": "", "properties": {}}
-
         where_conditions = []
-
         custom_params = ['skip_area', 'skip_bbox']
         custom_clauses = {}
         if properties:
@@ -316,19 +313,8 @@ class OracleProvider(BaseProvider):
             where_dict["properties"] = dict(properties)
             for param in custom_params:
                 where_dict["properties"].pop(param)
-
-            # custom_clauses = [(key, value) for key, value in properties if key in custom_params]
             custom_clauses = {key: value for key, value in properties if key in custom_params}
-
             LOGGER.debug(f"type of custom clauses: {custom_clauses}")
-            #other_properties = dict([custom_clauses])
-
-            # other_properties.pop([key[0] for key in properties if key[0] not in custom_params])
-            LOGGER.debug(f"other_properties CONTAINS: {custom_clauses}")
-            LOGGER.debug(f"type other_properties is: {type(custom_clauses)}")
-            LOGGER.debug(f"retrieve value of skip_bbox: {custom_clauses['skip_bbox']}")
-
-            LOGGER.debug(f"WHERE DICT CONTAINS: {where_dict}")
             #TODO: you can test this with: 
             # http://localhost:5000/collections/lakes_oracle/items?f=json&skip_bbox=false&bbox=100,50,110,55
         if custom_clauses['skip_bbox'] == "true":

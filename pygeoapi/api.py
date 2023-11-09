@@ -1384,7 +1384,7 @@ class API:
         reserved_fieldnames = ['bbox', 'bbox-crs', 'crs', 'f', 'lang', 'limit',
                                'offset', 'resulttype', 'datetime', 'sortby',
                                'properties', 'skipGeometry', 'q',
-                               'filter', 'filter-lang']
+                               'filter', 'filter-lang', 'skip_bbox']
 
         collections = filter_dict_by_key_value(self.config['resources'],
                                                'type', 'collection')
@@ -1434,6 +1434,10 @@ class API:
 
         resulttype = request.params.get('resulttype') or 'results'
 
+
+        LOGGER.debug('Processing skip_bbox parameter')
+        skip_bbox = request.params.get('skip_bbox')
+
         LOGGER.debug('Processing bbox parameter')
 
         bbox = request.params.get('bbox')
@@ -1441,13 +1445,17 @@ class API:
         if bbox is None:
             bbox = []
         else:
-            try:
-                bbox = validate_bbox(bbox)
-            except ValueError as err:
-                msg = str(err)
-                return self.get_exception(
-                    HTTPStatus.BAD_REQUEST, headers, request.format,
-                    'InvalidParameterValue', msg)
+            if str(skip_bbox).lower() in ['y', 'yes', 't', 'true', 'on', '1']:
+                bbox = []
+                pass
+            else:
+                try:
+                    bbox = validate_bbox(bbox)
+                except ValueError as err:
+                    msg = str(err)
+                    return self.get_exception(
+                        HTTPStatus.BAD_REQUEST, headers, request.format,
+                        'InvalidParameterValue', msg)
 
         LOGGER.debug('Processing datetime parameter')
         datetime_ = request.params.get('datetime')
@@ -1634,6 +1642,7 @@ class API:
         LOGGER.debug(f'resulttype: {resulttype}')
         LOGGER.debug(f'sortby: {sortby}')
         LOGGER.debug(f'bbox: {bbox}')
+        LOGGER.debug(f'skip_bbox: {skip_bbox}')
         if provider_type == 'feature':
             LOGGER.debug(f'crs: {query_crs_uri}')
         LOGGER.debug(f'datetime: {datetime_}')
@@ -1649,7 +1658,7 @@ class API:
             content = p.query(offset=offset, limit=limit,
                               resulttype=resulttype, bbox=bbox,
                               datetime_=datetime_, properties=properties,
-                              sortby=sortby, skip_geometry=skip_geometry,
+                              sortby=sortby, skip_geometry=skip_geometry, 
                               select_properties=select_properties,
                               crs_transform_spec=crs_transform_spec,
                               q=q, language=prv_locale, filterq=filter_)

@@ -289,7 +289,8 @@ class OracleProvider(BaseProvider):
         return self.fields
 
     def _get_where_clauses(
-        self, properties, bbox, bbox_crs, sdo_mask="anyinteraction"
+        self, properties, bbox, bbox_crs,
+        sdo_mask="anyinteraction", **kwargs
     ):
         """
         Generarates WHERE conditions to be implemented in query.
@@ -299,6 +300,8 @@ class OracleProvider(BaseProvider):
 
         :returns: Dictionary with sql where clause and bind variables
         """
+        LOGGER.debug(f"_get_where_clauses KWARGS: {kwargs}")
+
         LOGGER.debug("Get where clause with bind variables as dictionary")
 
         where_dict = {"clause": "", "properties": {}}
@@ -309,40 +312,44 @@ class OracleProvider(BaseProvider):
             prop_clauses = [f"{key} = :{key}" for key, value in properties]
             where_conditions += prop_clauses
             where_dict["properties"] = dict(properties)
+        
+        skip_bbox = kwargs.get("skip_bbox") or "false"
+        if skip_bbox.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
+            pass
+        else:
+            if bbox:
+                bbox_dict = {"clause": "", "properties": {}}
 
-        if bbox:
-            bbox_dict = {"clause": "", "properties": {}}
+                sdo_mask = f"mask={sdo_mask}"
 
-            sdo_mask = f"mask={sdo_mask}"
+                bbox_dict["properties"] = {
+                    "srid": bbox_crs or 4326,
+                    "minx": bbox[0],
+                    "miny": bbox[1],
+                    "maxx": bbox[2],
+                    "maxy": bbox[3],
+                    "sdo_mask": sdo_mask,
+                }
 
-            bbox_dict["properties"] = {
-                "srid": bbox_crs or 4326,
-                "minx": bbox[0],
-                "miny": bbox[1],
-                "maxx": bbox[2],
-                "maxy": bbox[3],
-                "sdo_mask": sdo_mask,
-            }
+                bbox_dict[
+                    "clause"
+                ] = f"sdo_relate({self.geom}, \
+                                mdsys.sdo_geometry(2003, \
+                                                    :srid, \
+                                                    NULL, \
+                                                    mdsys.sdo_elem_info_array(\
+                                                        1, \
+                                                        1003, \
+                                                        3\
+                                                    ), \
+                                mdsys.sdo_ordinate_array(:minx, \
+                                                        :miny, \
+                                                        :maxx, \
+                                                        :maxy)), \
+                                :sdo_mask) = 'TRUE'"
 
-            bbox_dict[
-                "clause"
-            ] = f"sdo_relate({self.geom}, \
-                             mdsys.sdo_geometry(2003, \
-                                                :srid, \
-                                                NULL, \
-                                                mdsys.sdo_elem_info_array(\
-                                                    1, \
-                                                    1003, \
-                                                    3\
-                                                ), \
-                             mdsys.sdo_ordinate_array(:minx, \
-                                                      :miny, \
-                                                      :maxx, \
-                                                      :maxy)), \
-                             :sdo_mask) = 'TRUE'"
-
-            where_conditions.append(bbox_dict["clause"])
-            where_dict["properties"].update(bbox_dict["properties"])
+                where_conditions.append(bbox_dict["clause"])
+                where_dict["properties"].update(bbox_dict["properties"])
 
         if where_conditions:
             where_dict["clause"] = f" WHERE {' AND '.join(where_conditions)}"
@@ -413,7 +420,7 @@ class OracleProvider(BaseProvider):
 
         :returns: GeoJSON FeaturesCollection
         """
-
+        LOGGER.debug(f"KWARGS: {kwargs}")
         # Check mandatory filter properties
         property_dict = dict(properties)
         if self.mandatory_properties:
@@ -442,6 +449,7 @@ class OracleProvider(BaseProvider):
                     bbox=bbox,
                     bbox_crs=self.source_crs,
                     sdo_mask=self.sdo_mask,
+                    **kwargs
                 )
 
                 # Not dangerous to use self.table as substitution,
@@ -483,6 +491,7 @@ class OracleProvider(BaseProvider):
                 bbox=bbox,
                 bbox_crs=self.source_crs,
                 sdo_mask=self.sdo_mask,
+                **kwargs
             )
 
             # Build geometry column call

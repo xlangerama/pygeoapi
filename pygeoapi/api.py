@@ -1434,6 +1434,10 @@ class API:
 
         resulttype = request.params.get('resulttype') or 'results'
 
+        LOGGER.debug('Processing skip_bbox parameter')
+
+        skip_bbox = request.params.get('skip_bbox')
+
         LOGGER.debug('Processing bbox parameter')
 
         bbox = request.params.get('bbox')
@@ -1634,6 +1638,7 @@ class API:
         LOGGER.debug(f'resulttype: {resulttype}')
         LOGGER.debug(f'sortby: {sortby}')
         LOGGER.debug(f'bbox: {bbox}')
+        LOGGER.debug(f'skip_bbox: {skip_bbox}')        
         if provider_type == 'feature':
             LOGGER.debug(f'crs: {query_crs_uri}')
         LOGGER.debug(f'datetime: {datetime_}')
@@ -1650,6 +1655,7 @@ class API:
                               resulttype=resulttype, bbox=bbox,
                               datetime_=datetime_, properties=properties,
                               sortby=sortby, skip_geometry=skip_geometry,
+                              skip_bbox=skip_bbox,
                               select_properties=select_properties,
                               crs_transform_spec=crs_transform_spec,
                               q=q, language=prv_locale, filterq=filter_)

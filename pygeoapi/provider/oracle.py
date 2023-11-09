@@ -312,8 +312,13 @@ class OracleProvider(BaseProvider):
             prop_clauses = [f"{key} = :{key}" for key, value in properties]
             where_conditions += prop_clauses
             where_dict["properties"] = dict(properties)
-        
-        skip_bbox = kwargs.get("skip_bbox") or "false"
+
+        LOGGER.debug(f"properties contains: {properties}")
+        LOGGER.debug(f"kwargs contains: {kwargs}")
+        try:
+            skip_bbox = kwargs.get("extra").get("skip_bbox") or False
+        except:
+            skip_bbox = False
         if skip_bbox.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
             pass
         else:

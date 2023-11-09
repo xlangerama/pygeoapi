@@ -1381,6 +1381,7 @@ class API:
                                                **self.api_headers)
 
         properties = []
+        extra = {}
         reserved_fieldnames = ['bbox', 'bbox-crs', 'crs', 'f', 'lang', 'limit',
                                'offset', 'resulttype', 'datetime', 'sortby',
                                'properties', 'skipGeometry', 'q',
@@ -1433,10 +1434,6 @@ class API:
                 'InvalidParameterValue', msg)
 
         resulttype = request.params.get('resulttype') or 'results'
-
-        LOGGER.debug('Processing skip_bbox parameter')
-
-        skip_bbox = request.params.get('skip_bbox')
 
         LOGGER.debug('Processing bbox parameter')
 
@@ -1559,6 +1556,10 @@ class API:
             if k not in reserved_fieldnames and k in list(p.fields.keys()):
                 LOGGER.debug(f'Adding property filter {k}={v}')
                 properties.append((k, v))
+            elif k not in reserved_fieldnames and k not in list(p.fields.keys()):
+                LOGGER.debug(f'Adding extra filter {k}={v}')
+                extra[k]=v
+
 
         LOGGER.debug('processing sort parameter')
         val = request.params.get('sortby')
@@ -1638,7 +1639,7 @@ class API:
         LOGGER.debug(f'resulttype: {resulttype}')
         LOGGER.debug(f'sortby: {sortby}')
         LOGGER.debug(f'bbox: {bbox}')
-        LOGGER.debug(f'skip_bbox: {skip_bbox}')        
+        LOGGER.debug(f'extra: {extra}')
         if provider_type == 'feature':
             LOGGER.debug(f'crs: {query_crs_uri}')
         LOGGER.debug(f'datetime: {datetime_}')
@@ -1654,9 +1655,9 @@ class API:
             content = p.query(offset=offset, limit=limit,
                               resulttype=resulttype, bbox=bbox,
                               datetime_=datetime_, properties=properties,
-                              sortby=sortby, skip_geometry=skip_geometry,
-                              skip_bbox=skip_bbox,
+                              sortby=sortby, skip_geometry=skip_geometry, 
                               select_properties=select_properties,
+                              extra=extra,
                               crs_transform_spec=crs_transform_spec,
                               q=q, language=prv_locale, filterq=filter_)
         except ProviderInvalidQueryError as err:

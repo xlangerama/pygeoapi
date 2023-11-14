@@ -1553,12 +1553,13 @@ class API:
 
         LOGGER.debug('processing property parameters')
         for k, v in request.params.items():
-            if k not in reserved_fieldnames and k in list(p.fields.keys()):
-                LOGGER.debug(f'Adding property filter {k}={v}')
-                properties.append((k, v))
-            elif k not in reserved_fieldnames and k not in list(p.fields.keys()):
-                LOGGER.debug(f'Adding extra filter {k}={v}')
-                extra[k]=v
+            if k not in reserved_fieldnames:
+                if k in list(p.fields.keys()):
+                    LOGGER.debug(f'Adding property filter {k}={v}')
+                    properties.append((k, v))
+                else:
+                    LOGGER.debug(f'Adding extra filter {k}={v}')
+                    extra[k]=v
 
 
         LOGGER.debug('processing sort parameter')

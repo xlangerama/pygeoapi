@@ -315,10 +315,11 @@ class OracleProvider(BaseProvider):
 
         LOGGER.debug(f"properties contains: {properties}")
         LOGGER.debug(f"kwargs contains: {kwargs}")
-        try:
-            skip_bbox = kwargs.get("extra").get("skip_bbox") or False
-        except:
-            skip_bbox = False
+
+        #TODO pls review this, "false" as string
+        
+        skip_bbox = kwargs.get("extra", {}).get("skip_bbox", "false")
+        
         if skip_bbox.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
             pass
         else:

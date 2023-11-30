@@ -394,6 +394,7 @@ class OracleProvider(BaseProvider):
         skip_geometry=False,
         q=None,
         filterq=None,
+        extra_params={},
         **kwargs,
     ):
         """
@@ -410,11 +411,16 @@ class OracleProvider(BaseProvider):
         :param skip_geometry: bool of whether to skip geometry (default False)
         :param q: full-text search term(s)
         :param filterq: CQL query as text string
+        :param extra_params: Additional parameters added to the
+                query which are not in reserved
+                fieldnames or fields in the oracle table
 
         :returns: GeoJSON FeaturesCollection
         """
 
         # Check mandatory filter properties
+        LOGGER.debug(f"properties contains: {properties}")
+        LOGGER.debug(f"Extra Params contains: {extra_params}")
         property_dict = dict(properties)
         if self.mandatory_properties:
             for mand_col in self.mandatory_properties:
@@ -537,6 +543,7 @@ class OracleProvider(BaseProvider):
                     bbox,
                     self.source_crs,
                     properties,
+                    extra_params=extra_params,
                 )
 
             # Clean up placeholders that aren't used by the
@@ -622,7 +629,7 @@ class OracleProvider(BaseProvider):
 
         return id
 
-    def get(self, identifier, **kwargs):
+    def get(self, identifier, extra_params={}, **kwargs):
         """
         Query the provider for a specific
         feature id e.g: /collections/ocrl_lakes/items/1
@@ -664,6 +671,7 @@ class OracleProvider(BaseProvider):
                     bind_variables,
                     self.sql_manipulator_options,
                     identifier,
+                    extra_params=extra_params,
                 )
 
             LOGGER.debug(f"SQL Query: {sql_query}")

@@ -51,6 +51,7 @@ class SqlManipulator:
         bbox,
         source_crs,
         properties,
+        **kwargs,
     ):
         sql = "ID = 10 AND :foo != :bar"
 
@@ -74,6 +75,7 @@ class SqlManipulator:
         bind_variables,
         sql_manipulator_options,
         identifier,
+        **kwargs,
     ):
         sql_query = f"{sql_query} AND 'auth' = 'you arent allowed'"
 
@@ -86,6 +88,7 @@ class SqlManipulator:
         bind_variables,
         sql_manipulator_options,
         request_data,
+        **kwargs,
     ):
         bind_variables["name"] = "overwritten"
 
@@ -99,6 +102,7 @@ class SqlManipulator:
         sql_manipulator_options,
         identifier,
         request_data,
+        **kwargs,
     ):
         bind_variables["area"] = 42
         bind_variables["volume"] = 42
@@ -112,6 +116,7 @@ class SqlManipulator:
         bind_variables,
         sql_manipulator_options,
         identifier,
+        **kwargs,
     ):
         sql_query = f"{sql_query} AND 'auth' = 'you arent allowed'"
 
